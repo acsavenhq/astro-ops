@@ -111,13 +111,63 @@ export function runLighthouse({
   chromeFlags = BUDGET_DEFAULTS.chromeFlags,
   timeoutMs = BUDGET_DEFAULTS.timeoutMs,
 }) {
+  /*
+    These two values reach a shell on Windows, so they are checked before they get there.
+
+    spawnSync runs with `shell: true` on win32 below, because npx is npx.cmd and Node
+    refuses to execute a .cmd without one — that is the fix for CVE-2024-27980, and it has
+    the side effect of making every argument shell-interpreted on that platform. Both `url`
+    and `chromeFlags` come from the consuming site's config rather than from here, and Node
+    now warns about exactly this (DEP0190).
+
+    The exposure is narrow: editing that config already implies being able to run code from
+    a build script. It widens on CI that builds pull requests, where a fork could change the
+    config and reach the runner's shell. This package runs inside other people's pipelines,
+    so it is worth not being the way in.
+
+    Parsing the URL is NOT enough, and assuming otherwise is how the first version of this
+    check shipped wrong. `new URL()` leaves backticks, $, |, ; and & untouched in `href` —
+    verified, not assumed — so a URL that parses perfectly can still carry a command through
+    cmd.exe. The punctuation check below is what actually does the work.
+
+    It runs only on Windows, because there is no shell on POSIX and no reason to reject a
+    legitimate query string there. On Windows a URL needing `&` must percent-encode it as
+    %26; that is a real constraint and it is better than a silent shell.
+  */
+  const parsed = (() => {
+    try {
+      return new URL(String(url));
+    } catch {
+      return null;
+    }
+  })();
+  if (!parsed || (parsed.protocol !== 'http:' && parsed.protocol !== 'https:')) {
+    return { ok: false, error: `budgets.url must be an http or https URL, got: ${String(url).slice(0, 80)}` };
+  }
+
+  const SHELL_PUNCTUATION = /[;&|`$<>(){}^%!\n\r"']/;
+  if (process.platform === 'win32') {
+    if (SHELL_PUNCTUATION.test(parsed.href)) {
+      return {
+        ok: false,
+        error:
+          `budgets.url reaches a Windows shell and contains shell punctuation: ${parsed.href.slice(0, 80)}. ` +
+          'Percent-encode it (& as %26, for example) or run the budget check on a POSIX runner.',
+      };
+    }
+    const badFlag = chromeFlags.find((f) => SHELL_PUNCTUATION.test(String(f)));
+    if (badFlag) {
+      return { ok: false, error: `budgets.chromeFlags contains shell punctuation: ${String(badFlag).slice(0, 80)}` };
+    }
+  }
+
   const dir = mkdtempSync(join(tmpdir(), 'astro-ops-lh-'));
   const outPath = join(dir, 'report.json');
 
   const args = [
     '--no-install',
     'lighthouse',
-    url,
+    parsed.href,
     '--output=json',
     `--output-path=${outPath}`,
     '--quiet',
