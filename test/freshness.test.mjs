@@ -147,6 +147,47 @@ test('drift: flags only sourced claims the feed actually names', async () => {
   assert.deepEqual(res.drifted.map((c) => c.id), ['a']);
 });
 
+/*
+  This is the case that shipped broken. tryquickimg's CUET source returned HTTP 525 for one
+  scheduled run, so the worker wrote a record carrying fetchError — with baselineHash and
+  latestHash still identical, because the page had not changed. The gate saw a record and
+  called it "changed", blocking a deploy and telling the reader to re-verify a page that had
+  not moved. Those are opposite claims and must not share a report line.
+*/
+test('drift: a fetch error with matching hashes is not a change', async () => {
+  const claims = [{ id: 'cuet', sourceUrl: 'https://x/cuet' }];
+  const res = await fetchDrift('https://x/feed', claims, 100, async () => ({
+    status: 200,
+    ok: true,
+    json: async () => ({ cuet: { baselineHash: 'abc', latestHash: 'abc', fetchError: 'HTTP 525' } }),
+  }));
+  assert.equal(res.status, 'ok');
+  assert.deepEqual(res.drifted, [], 'identical hashes mean the source did not change');
+  assert.deepEqual(res.unchecked.map((c) => c.id), ['cuet'], 'but it still could not be checked');
+});
+
+test('drift: differing hashes are still a change', async () => {
+  const claims = [{ id: 'cuet', sourceUrl: 'https://x/cuet' }];
+  const res = await fetchDrift('https://x/feed', claims, 100, async () => ({
+    status: 200,
+    ok: true,
+    json: async () => ({ cuet: { baselineHash: 'abc', latestHash: 'zzz' } }),
+  }));
+  assert.deepEqual(res.drifted.map((c) => c.id), ['cuet']);
+  assert.deepEqual(res.unchecked, []);
+});
+
+test('drift: a feed reporting no hashes is still treated as a change', async () => {
+  // Conservative on purpose: absence of evidence is not evidence the source held still.
+  const claims = [{ id: 'a', sourceUrl: 'https://x/a' }];
+  const res = await fetchDrift('https://x/feed', claims, 100, async () => ({
+    status: 200,
+    ok: true,
+    json: async () => ({ a: { detectedAt: '2026-08-16' } }),
+  }));
+  assert.deepEqual(res.drifted.map((c) => c.id), ['a']);
+});
+
 test('drift: no configured feed is "disabled", not a failure', async () => {
   const res = await fetchDrift(null, [], 100);
   assert.equal(res.status, 'disabled');

@@ -269,6 +269,20 @@ async function cmdCheckFreshness(config, root, quiet) {
     failed = 1;
   }
 
+  /*
+    A source the watchdog could not reach is worth saying out loud, but it is NOT a build
+    failure. The content did not change — the hashes prove that — and the outage belongs to
+    someone else's server, so blocking a deploy on it gives the reader nothing to act on.
+    A source that stays unreachable long enough to matter surfaces through RECHECK_BY above,
+    which is the check that actually expires.
+  */
+  if (drift.unchecked?.length && !quiet) {
+    console.log(`  ⚠ ${drift.unchecked.length} source(s) could not be checked (unchanged since last accepted):`);
+    for (const c of drift.unchecked) {
+      console.log(`      ${c.id}${c.label ? ` (${c.label})` : ''} — ${c.fetchError} at ${c.fetchErrorAt ?? 'unknown time'}`);
+    }
+  }
+
   if (!failed && !quiet) {
     ok(`freshness OK (0 overdue${dueSoon.length ? `, ${dueSoon.length} due soon` : ''})`);
   }

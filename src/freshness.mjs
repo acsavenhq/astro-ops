@@ -230,9 +230,26 @@ export async function fetchDrift(url, claims, timeoutMs = 8000, fetchImpl = fetc
     return { status: 'broken', drifted: [], detail: `invalid JSON: ${err?.message ?? err}` };
   }
 
-  const drifted = claims
+  const named = claims
     .filter((c) => c.sourceUrl && flags && flags[c.id])
     .map((c) => ({ ...c, ...flags[c.id] }));
 
-  return { status: 'ok', drifted };
+  /*
+    Being named by the feed is not the same as having changed.
+
+    A watchdog also writes a record when it could not FETCH the source at all — an upstream
+    TLS failure, a timeout, a 5xx from someone else's server. Reporting that as "the source
+    changed" states the opposite of what happened and sends someone off to re-verify a page
+    that never moved. Worse, it blocks a deploy for a reason the reader cannot act on, and a
+    gate that cries wolf is one people learn to bypass.
+
+    The test is deliberately conservative: treat a record as changed UNLESS both hashes are
+    present and equal. A feed that reports no hashes at all still counts as drift, because
+    the absence of evidence is not evidence the source held still.
+  */
+  const unchanged = (e) => Boolean(e.baselineHash && e.latestHash && e.baselineHash === e.latestHash);
+  const drifted = named.filter((e) => !unchanged(e));
+  const unchecked = named.filter((e) => unchanged(e) && e.fetchError);
+
+  return { status: 'ok', drifted, unchecked };
 }
