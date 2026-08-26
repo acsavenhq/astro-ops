@@ -1,5 +1,5 @@
 /**
- * Production gates for this site. See https://github.com/SamsonPG/astro-ops
+ * Production gates for this site. See https://github.com/acsavenhq/astro-ops
  *
  * Every value below is deliberate. Read the comments before loosening one — each is
  * tightened against a specific failure, and the loose version usually looks fine right up

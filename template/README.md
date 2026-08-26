@@ -127,7 +127,7 @@ gagged.
 
 ## The engine
 
-All six gates come from [`@acsaven/astro-ops`](https://github.com/SamsonPG/astro-ops) —
+All six gates come from [`@acsaven/astro-ops`](https://github.com/acsavenhq/astro-ops) —
 MIT, zero runtime dependencies, installed as a git dependency so there is no registry
 account involved. It is free and stays free.
 

@@ -73,22 +73,67 @@ runs.
 
 ## Install
 
-Installed as a git dependency — there is no registry publish:
+From npm:
+
+```sh
+npm i -D @acsaven/astro-ops
+```
+
+Or as a git dependency, which is how the Try family installs it:
 
 ```jsonc
 // package.json
 {
   "devDependencies": {
-    "@acsaven/astro-ops": "github:SamsonPG/astro-ops"
+    "@acsaven/astro-ops": "github:acsavenhq/astro-ops#v0.2.2"
   }
 }
 ```
 
-Pin a tag or commit (`github:SamsonPG/astro-ops#v0.1.0`) if you want a build that cannot
-move under you. `npm ci` resolves git dependencies natively, so CI needs no extra setup.
+`npm ci` resolves git dependencies natively, so CI needs no extra setup.
 
 Zero runtime dependencies. It installs into your build pipeline, so every dependency it
 carried would become one you inherit — it carries none.
+
+## Updating
+
+**Nothing here updates itself.** npm never pushes a new version at an installed project: a
+range only re-resolves on a fresh install or an explicit `npm update`, and a committed
+`package-lock.json` pins the resolved version until something changes it.
+
+What a given consumer gets:
+
+| declared            | fresh install | `npm update` | left alone |
+| ------------------- | ------------- | ------------ | ---------- |
+| `^0.2.2` / `~0.2.2` | newest 0.2.x  | newest 0.2.x | unchanged  |
+| `0.2.2` exact       | 0.2.2         | 0.2.2        | unchanged  |
+| `github:…#v0.2.2`   | v0.2.2        | v0.2.2       | unchanged  |
+
+The Try sites pin the git tag deliberately. They used to say `github:acsavenhq/astro-ops`
+with no ref, so every install pulled whatever `main` happened to be — meaning the gates
+guarding a deploy could change without anything recording that they had. A pinned tag costs
+a manual bump and buys the ability to say which version of the checks a given release
+actually passed.
+
+To move a site to a new release:
+
+```sh
+npm i -D github:acsavenhq/astro-ops#v0.2.3
+npx astro-ops check          # confirm the gates still pass before deploying
+```
+
+Cutting a release, for whoever does it next:
+
+```sh
+npm test                     # the gates gate themselves
+npm version patch            # or minor / major
+git push && git push --tags
+npm publish --access public  # 2FA prompts in a browser
+```
+
+Publishing to npm and tagging git are separate acts, and both are needed: the registry
+serves anyone who installs by name, the tag serves the sites that install by ref. Shipping
+one without the other leaves the two disagreeing about what `0.2.x` means.
 
 ## Quick start
 

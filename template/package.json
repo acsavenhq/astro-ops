@@ -18,7 +18,7 @@
     "check:budgets": "node scripts/with-server.mjs astro-ops check:budgets"
   },
   "devDependencies": {
-    "@acsaven/astro-ops": "github:SamsonPG/astro-ops",
+    "@acsaven/astro-ops": "^0.2.2",
     "astro": "^7.2.2",
     "lighthouse": "^13.4.1"
   }

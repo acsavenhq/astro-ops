@@ -13,9 +13,15 @@ testing — a stale cache key, a page linking to a page that no longer exists, a
 script that crept into a privacy-first site, a data file that quietly went out of date. It is
 a command-line tool with **zero runtime dependencies**: everything is plain Node.
 
-Four sibling sites (TryQuickImg, TryCalculatingNow, TryDevSnip, Acsaven) consume it straight
-from GitHub — `"@acsaven/astro-ops": "github:SamsonPG/astro-ops"` — so **pushing to `main`
-ships it**. There is no npm publish step.
+Three sibling sites (TryQuickImg, TryCalculatingNow, TryDevSnip) consume it from GitHub by
+tag — `"@acsaven/astro-ops": "github:acsavenhq/astro-ops#v0.2.2"`. Acsaven does not use it;
+it is a plain static site with its own scripts.
+
+**Pushing to `main` does not ship it.** Those sites pin a tag, so a new release means
+tagging here and bumping the ref there. It used to be an unpinned `github:acsavenhq/astro-ops`,
+where any install pulled whatever `main` happened to be — the gates guarding a deploy could
+change with nothing recording that they had. It is also published to npm now. See
+**Updating** in the README for both halves.
 
 ---
 
@@ -185,8 +191,12 @@ comment saying what it does, then validate it. The defaults are the documentatio
 id, which cold-starts every cached page on every consuming site. Assets are excluded on
 purpose: they are separately-hashed URLs, so changing one cannot make cached HTML wrong.
 
-**Ship it** → merge to `main`. The four sites resolve `github:SamsonPG/astro-ops`, so there is
-no publish step; their next `npm install` picks it up.
+**Ship it** → merging to `main` is not shipping. Consumers pin, so a release is three acts:
+`npm version patch`, push the tag, `npm publish --access public`. Then bump the ref in each
+consuming site and run `npx astro-ops check` there before deploying.
+
+Skipping the bump is the quiet failure mode: `main` has the fix, every site still runs the
+old gates, and nothing anywhere says so.
 
 ---
 
