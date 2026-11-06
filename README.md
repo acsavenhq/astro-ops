@@ -20,7 +20,7 @@ drifting. Every check here answers something that went wrong once, and the comme
 it says what.
 
 > **Status: stable.** All seven gates are built, tested, and running in production on three
-> live sites. [`template/`](https://raw.githubusercontent.com/acsavenhq/astro-ops/tree/main/template) is a working Astro site with every gate wired into
+> live sites. [`template/`](https://github.com/acsavenhq/astro-ops/tree/main/template) is a working Astro site with every gate wired into
 > its build and CI — green out of the box, and each documented failure verified to fail.
 
 ---
@@ -302,7 +302,7 @@ constant id forever.
 
 ## The starter
 
-[`template/`](https://raw.githubusercontent.com/acsavenhq/astro-ops/tree/main/template) is a complete Astro site with all seven gates wired into its build
+[`template/`](https://github.com/acsavenhq/astro-ops/tree/main/template) is a complete Astro site with all seven gates wired into its build
 and CI. Clone it, run `npm install && npm run check`, and every gate reports.
 
 It scores 100 / 100 / 96 / 100 on Lighthouse, carries zero npm vulnerabilities, and its
